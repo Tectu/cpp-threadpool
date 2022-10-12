@@ -13,12 +13,12 @@ main()
     std::vector<std::future<int>> results;
     for (std::size_t i = 0; i < 10; i++) {
 
-        auto future = tp.enqueue([i]() -> int {
+        auto result = tp.enqueue([i]() -> int {
             std::this_thread::sleep_for(std::chrono::seconds(1));
             return i * i;
         });
 
-        results.emplace_back(std::move(future));
+        results.emplace_back(std::move(result));
     }
 
     std::cout << "waiting..." << std::endl;
