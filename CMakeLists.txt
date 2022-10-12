@@ -1,29 +1,15 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.23)
 
 project(
-    thread_pool
+    cpp-threadpool
     LANGUAGES
         CXX
 )
 
-set(TARGET thread-pool)
-add_executable(${TARGET})
+option(THREADPOOL_BUILD_EXAMPLES "Whether to build examples" ON)
 
-target_compile_features(
-    ${TARGET}
-    PUBLIC
-        cxx_std_20
-)
+add_subdirectory(lib)
 
-target_sources(
-    ${TARGET}
-    PRIVATE
-        main.cpp
-        thread_pool.hpp
-)
-
-target_link_libraries(
-    ${TARGET}
-    PRIVATE
-        pthread
-)
+if (THREADPOOL_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
