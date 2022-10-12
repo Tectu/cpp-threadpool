@@ -10,6 +10,7 @@ A simple to use, robust and flexible thread pool written in C++20.
 
 Features:
 - Written in modern C++20
+- Header-only
 - Granular locking to improve mixed read/write loads
 - High-level status interface
 - Generic enqueuing interface allow any callable, not just functions
