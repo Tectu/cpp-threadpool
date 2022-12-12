@@ -131,12 +131,7 @@ namespace jbo
             std::vector<enum worker::state> thread_states;
         };
 
-        thread_pool(const std::size_t size)
-        {
-            m_workers.reserve(size);
-            for (std::size_t i = 0; i < size; i++)
-                m_workers.emplace_back(std::bind(&thread_pool::work, this, i));
-        }
+        thread_pool() = default;
 
         thread_pool(const thread_pool&) = delete;
         thread_pool(thread_pool&&) noexcept = delete;
@@ -148,6 +143,26 @@ namespace jbo
 
         thread_pool& operator=(const thread_pool&) = delete;
         thread_pool& operator=(thread_pool&&) noexcept = delete;
+
+        /**
+         * Initializes the threadpool.
+         *
+         * @param size The number of worker threads to spawn.
+         */
+        void
+        init(const std::size_t size)
+        {
+            // Prevent re-init
+            static bool init_done = false;
+            if (init_done)
+                return;
+            init_done = true;
+
+            // Create workers
+            m_workers.reserve(size);
+            for (std::size_t i = 0; i < size; i++)
+                m_workers.emplace_back(std::bind(&thread_pool::work, this, i));
+        }
 
         /**
          * Stops the thread pool.
