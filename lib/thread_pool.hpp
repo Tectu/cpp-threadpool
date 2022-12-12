@@ -91,26 +91,27 @@ namespace jbo
     // ToDo: Introduce state type recording all stats and api for that
     class thread_pool
     {
+    public:
+        enum class worker_state
+        {
+            idle,
+            working,
+            stopped,
+        };
+
     private:
         struct worker
         {
-            enum class state
-            {
-                idle,
-                working,
-                stopped,
-            };
-
             std::thread thread;     // ToDo: Do we have any benefits of using std::jthread in this scenario?
-            std::atomic<enum state> state;
+            std::atomic<enum worker_state> state;
 
             worker() = default;
 
             worker(const worker&) = delete;
 
             worker(worker&& other) noexcept :
-                    thread{ std::move(other.thread) },
-                    state{ other.state.load() }
+                thread{ std::move(other.thread) },
+                state{ other.state.load() }
             {
             }
 
@@ -118,7 +119,7 @@ namespace jbo
             template<typename Func, typename ...Args>
             worker(Func&& f, Args&& ...args) :
                 thread{ std::forward<Func>(f), std::forward<Args>(args)... },
-                state{ state::idle }
+                state{ worker_state::idle }
             {
             }
         };
@@ -128,11 +129,10 @@ namespace jbo
         {
             std::size_t pool_size  = 0;
             std::size_t queue_size = 0;
-            std::vector<enum worker::state> thread_states;
+            std::vector<enum worker_state> thread_states;
         };
 
         thread_pool() = default;
-
         thread_pool(const thread_pool&) = delete;
         thread_pool(thread_pool&&) noexcept = delete;
 
@@ -292,7 +292,7 @@ namespace jbo
             while (true) {
 
                 // Currently we're idling
-                w.state = worker::state::idle;
+                w.state = worker_state::idle;
 
                 // Get task
                 std::function<void()> task;
@@ -308,7 +308,7 @@ namespace jbo
 
                     // If the thread pool is supposed to stop AND the queue is empty, this thread won't be needed anymore.
                     if (m_stop.test() && m_queue.empty()) {
-                        w.state = worker::state::stopped;
+                        w.state = worker_state::stopped;
                         return;
                     }
 
@@ -318,7 +318,7 @@ namespace jbo
                 }
 
                 // Run task
-                w.state = worker::state::working;
+                w.state = worker_state::working;
                 task();
             }
         }
