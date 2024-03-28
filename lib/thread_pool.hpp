@@ -214,8 +214,8 @@ namespace jbo
 
             // Thread status
             ret.thread_states.reserve(m_workers.size());
-            for (std::size_t i = 0; i < m_workers.size(); i++)
-                ret.thread_states.emplace_back(m_workers[i].state);
+            for (const auto& w : m_workers)
+                ret.thread_states.emplace_back(w.state);
 
             return ret;
         }
