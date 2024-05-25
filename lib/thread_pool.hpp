@@ -185,6 +185,19 @@ namespace jbo
                 if (w.thread.joinable())
                     w.thread.join();
             }
+
+            m_workers.clear();
+        }
+
+        /**
+         * Checks whether the threadpool is running
+         * @return
+         */
+        [[nodiscard]]
+        bool
+        is_running() const
+        {
+            return std::size(m_workers) > 0;
         }
 
         [[nodiscard]]
