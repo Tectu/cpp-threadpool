@@ -88,7 +88,6 @@ namespace jbo
      */
     // ToDo: Use std::shared_mutex to make stat reads faster
     // ToDo: Cache pool size?
-    // ToDo: Introduce state type recording all stats and api for that
     class thread_pool
     {
     public:
