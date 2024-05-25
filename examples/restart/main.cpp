@@ -11,7 +11,7 @@ main()
 
     std::cout << "initializing..." << std::endl;
     jbo::thread_pool tp;
-    tp.init(4);
+    tp.start(4);
 
     std::cout << "enqueuing..." << std::endl;
     std::vector<std::future<int>> results;
@@ -36,7 +36,7 @@ main()
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
     std::cout << "starting..." << std::endl;
-    tp.init(4);
+    tp.start(4);
 
     std::cout << "waiting... (2/2)" << std::endl;
     for (std::size_t i = num_tasks/2; i < num_tasks; i++)

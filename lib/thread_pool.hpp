@@ -145,12 +145,12 @@ namespace jbo
         thread_pool& operator=(thread_pool&&) noexcept = delete;
 
         /**
-         * Initializes the threadpool.
+         * Starts the threadpool.
          *
          * @param size The number of worker threads to spawn.
          */
         void
-        init(const std::size_t size)
+        start(const std::size_t size)
         {
             // Prevent re-init
             static bool init_done = false;

@@ -8,7 +8,7 @@ main()
 {
     std::cout << "initializing..." << std::endl;
     jbo::thread_pool tp;
-    tp.init(4);
+    tp.start(4);
 
     std::cout << "enqueuing..." << std::endl;
     std::vector<std::future<int>> results;
