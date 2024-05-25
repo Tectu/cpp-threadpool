@@ -42,7 +42,7 @@ namespace jbo
         size() const
         {
             read_lock lock(m_mtx);
-            return m_queue.size();
+            return std::size(m_queue);
         }
 
         void
@@ -205,14 +205,14 @@ namespace jbo
         pool_size() const
         {
             // ToDo: Needs to be protected when we support dynamic sizing
-            return m_workers.size();
+            return std::size(m_workers);
         }
 
         [[nodiscard]]
         std::size_t
         queue_size() const
         {
-            return m_queue.size();
+            return std::size(m_queue);
         }
 
         [[nodiscard]]
@@ -225,7 +225,7 @@ namespace jbo
             ret.queue_size = queue_size();
 
             // Thread status
-            ret.thread_states.reserve(m_workers.size());
+            ret.thread_states.reserve(std::size(m_workers));
             for (const auto& w : m_workers)
                 ret.thread_states.emplace_back(w.state);
 
