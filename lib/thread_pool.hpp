@@ -134,6 +134,13 @@ namespace jbo
         }
 
         [[nodiscard]]
+        const std::atomic_flag&
+        stop_token() const
+        {
+            return m_stop;
+        }
+
+        [[nodiscard]]
         std::size_t
         pool_size() const
         {
