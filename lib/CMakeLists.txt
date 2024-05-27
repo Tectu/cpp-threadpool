@@ -11,7 +11,9 @@ target_compile_features(
 target_sources(
     ${TARGET}
     INTERFACE
+        queue.hpp
         thread_pool.hpp
+        timer.hpp
 )
 
 target_link_libraries(

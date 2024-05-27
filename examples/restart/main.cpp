@@ -32,6 +32,8 @@ main()
     std::cout << "stopping..." << std::endl;
     tp.stop();
 
+    std::cout << "is_running(): " << (tp.is_running() ? "true" : "false") << std::endl;
+
     std::cout << "sleeping..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
