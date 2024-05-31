@@ -16,7 +16,33 @@ namespace jbo
     template<typename ... Ts> struct overload : Ts ... { using Ts::operator() ...; };
     template<class... Ts> overload(Ts...) -> overload<Ts...>;
 
+    struct timer_data;
+
+    /**
+     * @note Although this is called timer, it's actually just a handle. We do this to hide implementation complexity
+     *       from the user.
+     */
     struct timer
+    {
+        timer(timer_data& t) :
+            m_timer{ t }
+        {
+        }
+
+        void
+        start();
+
+        void
+        stop();
+
+    private:
+        timer_data& m_timer;
+    };
+
+    /**
+     * The actual timer data.
+     */
+    struct timer_data
     {
         /**
          * The task type.
@@ -28,12 +54,16 @@ namespace jbo
         void
         start()
         {
+            std::scoped_lock lock(m_mutex);
+
             enabled = true;
         }
 
         void
         stop()
         {
+            std::scoped_lock lock(m_mutex);
+
             enabled = false;
         }
 
@@ -49,24 +79,34 @@ namespace jbo
         struct singleshot {
         };
 
+        std::mutex m_mutex;
         task_t task;
-        std::chrono::milliseconds current;
+        std::chrono::milliseconds current;      // ToDo: Should this be atomic?
         bool enabled = false;
         std::variant<periodic_constant, periodic_uniform, singleshot> data;
+
+        [[nodiscard]]
+        timer
+        make_handle()
+        {
+            return timer{*this};
+        }
 
         template<typename RandomGenerator>
         void
         arm(RandomGenerator& rng)
         {
+            std::scoped_lock lock(m_mutex);
+
             std::visit(
                 overload{
-                    [this](timer::periodic_constant& td) {
+                    [this](timer_data::periodic_constant& td) {
                         current = td.interval;
                     },
-                    [this, &rng](timer::periodic_uniform& td) {
+                    [this, &rng](timer_data::periodic_uniform& td) {
                         current = std::chrono::milliseconds{td.distribution(rng)};
                     },
-                    [this](timer::singleshot& td) {
+                    [this](timer_data::singleshot& td) {
                         enabled = false;   // ToDo: Remove from timers list
                     }
                 },
@@ -74,6 +114,18 @@ namespace jbo
             );
         }
     };
+
+    void
+    timer::start()
+    {
+        m_timer.start();
+    }
+
+    void
+    timer::stop()
+    {
+        m_timer.stop();
+    }
 
     /**
      * A manager to manage timers.
@@ -102,7 +154,7 @@ namespace jbo
         {
             // Disable all timers
             std::scoped_lock lock(m_timers.mutex);
-            for (timer& t : m_timers.list)
+            for (timer_data& t : m_timers.list)
                 t.stop();
 
             // Stop task workers
@@ -114,32 +166,32 @@ namespace jbo
         }
 
         template<typename F, typename ...Args>
-        void
+        timer
         periodic(std::chrono::milliseconds interval, F&& f, Args&& ...args)
         {
-            add(
-            timer::periodic_constant{ .interval = interval },
+            return add(
+            timer_data::periodic_constant{ .interval = interval },
             std::forward<F>(f), std::forward<Args>(args)...
             );
         }
 
         template<typename F, typename ...Args>
-        void
+        timer
         periodic(std::chrono::milliseconds min, std::chrono::milliseconds max, F&& f, Args&& ...args)
         {
-            add(
-            timer::periodic_uniform{ .distribution = decltype(timer::periodic_uniform::distribution)(min.count(), max.count())},
+            return add(
+            timer_data::periodic_uniform{ .distribution = decltype(timer_data::periodic_uniform::distribution)(min.count(), max.count())},
                 std::forward<F>(f), std::forward<Args>(args)...
             );
         }
 
         // ToDo: This does currently not work because timer::arm() immediately disables the timer
         template<typename F, typename ...Args>
-        void
+        timer
         single_shot(std::chrono::milliseconds interval, F&& f, Args&& ...args)
         {
-            add(
-                timer::singleshot{ },
+            return add(
+                timer_data::singleshot{ },
                 std::forward<F>(f), std::forward<Args>(args)...
             );
         }
@@ -148,17 +200,18 @@ namespace jbo
             typename TimerData,
             typename F, typename ...Args
         >
-        void
+        timer
         add(TimerData&& td, F&& f, Args&& ...args)
         {
-            timer t;
+            std::scoped_lock lock(m_timers.mutex);
+
+            timer_data& t = m_timers.list.emplace_front();
             t.data = std::move(td);
             t.task = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
             t.enabled = true;
             t.arm(m_random_generator);
 
-            std::scoped_lock lock(m_timers.mutex);
-            m_timers.list.push_front(std::move(t));
+            return t.make_handle();
         }
 
         /**
@@ -169,7 +222,10 @@ namespace jbo
         {
             // Iterate over each timer
             std::scoped_lock lock(m_timers.mutex);
-            for (timer& t : m_timers.list) {
+            for (timer_data& t : m_timers.list) {
+                // Acquire mutex lock
+                //std::scoped_lock lock(t.m_mutex);
+
                 // Skip disabled timers
                 if (!t.enabled)
                     continue;
@@ -200,7 +256,7 @@ namespace jbo
         {
             while (!stop.test()) {
                 // Get task
-                timer::task_t task;
+                timer_data::task_t task;
                 {
                     // Get the task
                     if (!m_pending_tasks.try_pop(task))
@@ -216,9 +272,9 @@ namespace jbo
     private:
         struct {
             std::mutex mutex;
-            std::forward_list<timer> list;
+            std::forward_list<timer_data> list;      // ToDo: Should we use std::priority_list to keep timers with shorter interval in the front?
         } m_timers;
-        queue<timer::task_t> m_pending_tasks;
+        queue<timer_data::task_t> m_pending_tasks;
         std::atomic_flag m_stop;
 
         std::default_random_engine m_random_generator;
