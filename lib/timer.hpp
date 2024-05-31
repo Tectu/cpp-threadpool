@@ -196,24 +196,6 @@ namespace jbo
             );
         }
 
-        template<
-            typename TimerData,
-            typename F, typename ...Args
-        >
-        timer
-        add(TimerData&& td, F&& f, Args&& ...args)
-        {
-            std::scoped_lock lock(m_timers.mutex);
-
-            timer_data& t = m_timers.list.emplace_front();
-            t.data = std::move(td);
-            t.task = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
-            t.enabled = true;
-            t.arm(m_random_generator);
-
-            return t.make_handle();
-        }
-
         /**
          * @param d Duration since previous call of this function.
          */
@@ -272,7 +254,7 @@ namespace jbo
     private:
         struct {
             std::mutex mutex;
-            std::forward_list<timer_data> list;      // ToDo: Should we use std::priority_list to keep timers with shorter interval in the front?
+            std::forward_list<timer_data> list;      // ToDo: Should we use std::priority_queue to keep timers with shorter interval in the front?
         } m_timers;
         queue<timer_data::task_t> m_pending_tasks;
         std::atomic_flag m_stop;
@@ -297,6 +279,24 @@ namespace jbo
 
         timer_manager&
         operator=(timer_manager&&) = delete;
+
+        template<
+            typename TimerData,
+            typename F, typename ...Args
+        >
+        timer
+        add(TimerData&& td, F&& f, Args&& ...args)
+        {
+            std::scoped_lock lock(m_timers.mutex);
+
+            timer_data& t = m_timers.list.emplace_front();
+            t.data = std::move(td);
+            t.task = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+            t.enabled = true;
+            t.arm(m_random_generator);
+
+            return t.make_handle();
+        }
     };
 
     void
