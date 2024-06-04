@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <queue>
+#include <mutex>
 #include <shared_mutex>
 
 namespace jbo
