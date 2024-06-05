@@ -1,6 +1,7 @@
 #pragma once
 
 #include "queue.hpp"
+#include "thread_pool.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -304,7 +305,6 @@ namespace jbo
     setup_timer_manager(thread_pool& tp, std::chrono::milliseconds tick_resolution)
     {
         using clock_t = std::chrono::steady_clock;
-        auto& tm = timer_manager::instance();
 
         // Ticker
         std::ignore = tp.enqueue([&tp, tick_resolution]{
