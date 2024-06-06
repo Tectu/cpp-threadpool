@@ -14,7 +14,9 @@ main()
     jbo::thread_pool tp;
     tp.start(4);
 
-    jbo::setup_timer_manager(tp, 10ms);
+    std::cout << "starting timer executor..." << std::endl;
+    jbo::timer_executor te(jbo::timer_manager::instance(), tp, 10ms);
+    te.start();
 
     const auto start = clock_t::now();
 #if 1
@@ -34,10 +36,10 @@ main()
     });
 #endif
 
-    std::this_thread::sleep_for(10s);
+    std::this_thread::sleep_for(5s);
 
-    std::cout << "stopping timer_manager..." << std::endl;
-    jbo::timer_manager::instance().stop();
+    std::cout << "stopping timer executor..." << std::endl;
+    te.stop();
     std::cout << "stopping threadpool..." << std::endl;
     tp.stop();
 

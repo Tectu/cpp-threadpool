@@ -161,9 +161,6 @@ namespace jbo
             for (timer_data& t : m_timers.list)
                 t.stop();
 
-            // Stop task workers
-            m_stop.test_and_set();
-
             // Clear pending tasks
             // ToDo
             //m_pending_tasks.clear();
@@ -238,21 +235,18 @@ namespace jbo
         // Should be called in a thread.
         // ToDo: Make sure this is thread safe (i.e. having more than one worker thread)
         void
-        worker(const std::atomic_flag& stop)
+        execute_task()
         {
-            while (!stop.test()) {
-                // Get task
-                timer_data::task_t task;
-                {
-                    // Get the task
-                    if (!m_pending_tasks.try_pop(task))
-                        continue;
-                }
-
-                // Run task
-                task();
+            // Get task
+            timer_data::task_t task;
+            {
+                // Get the task
+                if (!m_pending_tasks.try_pop(task))
+                    return;
             }
 
+            // Run task
+            task();
         }
 
     private:
@@ -261,7 +255,6 @@ namespace jbo
             std::forward_list<timer_data> list;      // ToDo: Should we use std::priority_queue to keep timers with shorter interval in the front?
         } m_timers;
         queue<timer_data::task_t> m_pending_tasks;
-        std::atomic_flag m_stop;
 
         std::default_random_engine m_random_generator;
 
@@ -303,30 +296,78 @@ namespace jbo
         }
     };
 
-    void
-    setup_timer_manager(thread_pool& tp, std::chrono::milliseconds tick_resolution)
+    /**
+     * Executor to act on a timer manager.
+     */
+    // ToDo: Allow executing tasks via a threadpool. Note that this requires that timer tasks can be executed in parallel.
+    //       Can we protect against this or does the user have to do that themselves in their task executor function?
+    // ToDo: Better name?
+    struct
+    timer_executor
     {
-        using clock_t = std::chrono::steady_clock;
+        using clock_type = std::chrono::steady_clock;
 
-        // Ticker
-        std::ignore = tp.enqueue([&tp, tick_resolution]{
-            static auto t_prev = clock_t::now();
-            while (!tp.stop_token().test()) {
-                const auto t_now = clock_t::now();
+        timer_executor(timer_manager& tm, thread_pool& tp, std::chrono::milliseconds tick_interval) :
+            m_tm{ tm },
+            m_tp{ tp },
+            m_tick_interval{ tick_interval }
+        {
+        }
+
+        virtual
+        ~timer_executor()
+        {
+            stop();
+        }
+
+        void
+        start()
+        {
+            m_stop.clear();
+
+            m_task_thread = std::thread(&timer_executor::task_worker, this);
+            m_ticker_thread = std::thread(&timer_executor::tick_worker, this);
+        }
+
+        void
+        stop()
+        {
+            m_stop.test_and_set();
+
+            m_tm.stop();
+
+            m_ticker_thread.join();
+            m_task_thread.join();
+        }
+
+    private:
+        timer_manager& m_tm;
+        thread_pool& m_tp;
+        const std::chrono::milliseconds m_tick_interval;
+        std::thread m_ticker_thread;
+        std::thread m_task_thread;
+        std::atomic_flag m_stop;
+
+        void
+        tick_worker()
+        {
+            static auto t_prev = clock_type::now();
+            while (!m_stop.test()) {
+                const auto t_now = clock_type::now();
                 jbo::timer_manager::instance().tick(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_prev));
                 t_prev = t_now;
 
-                std::this_thread::sleep_for(tick_resolution);
+                std::this_thread::sleep_for(m_tick_interval);
             }
-        });
+        }
 
-        // Worker
-        // ToDo: Support more than one worker thread
-        std::ignore = tp.enqueue([&tp]{
-            while (!tp.stop_token().test()) {
-                jbo::timer_manager::instance().worker(tp.stop_token());
+        void
+        task_worker()
+        {
+            while (!m_stop.test()) {
+                jbo::timer_manager::instance().execute_task();
             }
-        });
-    }
+        }
+    };
 
 }
