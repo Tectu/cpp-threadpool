@@ -50,7 +50,7 @@ namespace jbo::timers
          *
          * @note: Using type-erasure here.
          */
-        using task_t = std::function<void()>;
+        using task_type = std::function<void()>;
 
         void
         start()
@@ -81,7 +81,7 @@ namespace jbo::timers
         };
 
         std::mutex m_mutex;
-        task_t task;
+        task_type task;
         std::chrono::milliseconds current;      // ToDo: Should this be atomic?
         bool enabled = false;
         std::variant<periodic_constant, periodic_uniform, singleshot> data;
@@ -251,7 +251,7 @@ namespace jbo::timers
         execute_task()
         {
             // Get task
-            data::task_t task;
+            data::task_type task;
             {
                 // Get the task
                 if (!m_pending_tasks.try_pop(task))
@@ -267,7 +267,7 @@ namespace jbo::timers
             std::mutex mutex;
             std::forward_list<data> list;      // ToDo: Should we use std::priority_queue to keep timers with shorter interval in the front?
         } m_timers;
-        queue<data::task_t> m_pending_tasks;
+        queue<data::task_type> m_pending_tasks;
 
         std::default_random_engine m_random_generator;
 
