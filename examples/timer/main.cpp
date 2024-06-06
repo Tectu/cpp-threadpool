@@ -1,4 +1,3 @@
-#include <thread_pool.hpp>
 #include <timer.hpp>
 
 #include <chrono>
@@ -10,12 +9,7 @@ main()
     using namespace std::chrono_literals;
     using clock_t = std::chrono::steady_clock;
 
-    std::cout << "starting threadpool..." << std::endl;
-    jbo::thread_pool tp;
-    tp.start(4);
-
-    std::cout << "starting timer executor..." << std::endl;
-    jbo::timer_executor te(jbo::timer_manager::instance(), tp, 10ms);
+    jbo::timer_executor te(jbo::timer_manager::instance(), 10ms);
     te.start();
 
     const auto start = clock_t::now();
@@ -40,8 +34,6 @@ main()
 
     std::cout << "stopping timer executor..." << std::endl;
     te.stop();
-    std::cout << "stopping threadpool..." << std::endl;
-    tp.stop();
 
     std::cout << "done" << std::endl;
 

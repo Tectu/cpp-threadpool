@@ -1,7 +1,6 @@
 #pragma once
 
 #include "queue.hpp"
-#include "thread_pool.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -307,9 +306,8 @@ namespace jbo
     {
         using clock_type = std::chrono::steady_clock;
 
-        timer_executor(timer_manager& tm, thread_pool& tp, std::chrono::milliseconds tick_interval) :
+        timer_executor(timer_manager& tm, std::chrono::milliseconds tick_interval) :
             m_tm{ tm },
-            m_tp{ tp },
             m_tick_interval{ tick_interval }
         {
         }
@@ -342,7 +340,6 @@ namespace jbo
 
     private:
         timer_manager& m_tm;
-        thread_pool& m_tp;
         const std::chrono::milliseconds m_tick_interval;
         std::thread m_ticker_thread;
         std::thread m_task_thread;
