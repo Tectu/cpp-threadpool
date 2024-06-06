@@ -197,6 +197,12 @@ namespace jbo
         }
 
         /**
+         * Perform a tick.
+         *
+         * @details This function needs to be called periodically.
+         *
+         * @note As of the current implementation, this must not be called by multiple threads.
+         *
          * @param d Duration since previous call of this function.
          */
         void
@@ -230,8 +236,15 @@ namespace jbo
 
         }
 
-        // Executes actual timer tasks.
-        // Should be called in a thread.
+        /**
+         * Executes actual timer tasks.
+         *
+         * @details Executes one timer task and returns. Returns immediately if currently no timer task needs to be
+         *          executed.
+         *
+         * @note This function should be called much more frequently than tick() to prevent the timer task execution
+         *       queue from filling up.
+         */
         // ToDo: Make sure this is thread safe (i.e. having more than one worker thread)
         void
         execute_task()
