@@ -133,9 +133,10 @@ namespace jbo
     /**
      * A manager to manage timers.
      *
-     * @details This implementation uses two queues: One to manage timeouts and one to manage actual timer tasks. The
-     *          benefit of this approach is that timer tasks are not being executed in the same thread as the tick()
-     *          function. This provides better timer accuracy.
+     * @details This maintains two queues: One containing the actual timers to process ticks & timeouts and one to queue
+     *          up timer tasks for execution when a timer expires.
+     *          The benefit of this approach is that timer tasks are not (necessarily) executed in the same thread as
+     *          the tick() function. This provides better timer accuracy.
      */
     struct timer_manager
     {
