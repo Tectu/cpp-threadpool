@@ -117,12 +117,14 @@ namespace jbo
         }
     };
 
+    inline
     void
     timer::start()
     {
         m_timer.start();
     }
 
+    inline
     void
     timer::stop()
     {
