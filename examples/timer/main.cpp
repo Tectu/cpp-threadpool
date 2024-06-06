@@ -3,32 +3,42 @@
 #include <chrono>
 #include <iostream>
 
+void
+print_time(std::ostream& out)
+{
+    using clock_type = std::chrono::steady_clock;
+
+    static const auto start = clock_type::now();
+
+    out << std::chrono::duration_cast<std::chrono::milliseconds>(clock_type::now() - start).count();
+}
+
 int
 main()
 {
     using namespace std::chrono_literals;
-    using clock_t = std::chrono::steady_clock;
 
     jbo::timers::executor te(jbo::timers::manager::instance(), 10ms);
     te.start();
 
-    const auto start = clock_t::now();
-#if 1
-    jbo::timers::manager::instance().periodic(100ms, [start]{
+    // A periodic timer
+    jbo::timers::manager::instance().periodic(100ms, []{
         static std::size_t i = 0;
-        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - start).count() << " | periodic 1: (" << i++ << ") --- thread: " << std::this_thread::get_id() << std::endl;
+        print_time(std::cout);
+        std::cout << " | periodic 1: (" << i++ << ") --- thread: " << std::this_thread::get_id() << std::endl;
     });
-#endif
-#if 1
-    jbo::timers::manager::instance().periodic(100ms, 1000ms, [start]{
-        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - start).count() << " | periodic 2: !" << std::endl;
+
+    // A timer firing at random intervals
+    jbo::timers::manager::instance().periodic(100ms, 1000ms, []{
+        print_time(std::cout);
+        std::cout << " | periodic 2: !" << std::endl;
     });
-#endif
-#if 1
-    jbo::timers::manager::instance().single_shot(1000ms, [start]{
-        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - start).count() << " | Single Shot!" << std::endl;
+
+    // A single shot timer
+    jbo::timers::manager::instance().single_shot(1000ms, []{
+        print_time(std::cout);
+        std::cout  << " | Single Shot!" << std::endl;
     });
-#endif
 
     std::this_thread::sleep_for(5s);
 
