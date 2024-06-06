@@ -11,13 +11,13 @@
 #include <thread>
 #include <variant>
 
-namespace jbo
+namespace jbo::timers
 {
 
     template<typename ... Ts> struct overload : Ts ... { using Ts::operator() ...; };
     template<class... Ts> overload(Ts...) -> overload<Ts...>;
 
-    struct timer_data;
+    struct data;
 
     /**
      * @note Although this is called timer, it's actually just a handle. We do this to hide implementation complexity
@@ -25,8 +25,8 @@ namespace jbo
      */
     struct timer
     {
-        timer(timer_data& t) :
-            m_timer{ t }
+        timer(data& d) :
+            m_data{ d }
         {
         }
 
@@ -37,13 +37,13 @@ namespace jbo
         stop();
 
     private:
-        timer_data& m_timer;
+        data& m_data;
     };
 
     /**
      * The actual timer data.
      */
-    struct timer_data
+    struct data
     {
         /**
          * The task type.
@@ -69,7 +69,7 @@ namespace jbo
         }
 
     private:
-        friend struct timer_manager;
+        friend struct manager;
 
         struct periodic_constant {
             std::chrono::milliseconds interval;
@@ -101,13 +101,13 @@ namespace jbo
 
             std::visit(
                 overload{
-                    [this](timer_data::periodic_constant& td) {
+                    [this](data::periodic_constant& td) {
                         current = td.interval;
                     },
-                    [this, &rng](timer_data::periodic_uniform& td) {
+                    [this, &rng](data::periodic_uniform& td) {
                         current = std::chrono::milliseconds{td.distribution(rng)};
                     },
-                    [this](timer_data::singleshot& td) {
+                    [this](data::singleshot& td) {
                         enabled = false;   // ToDo: Remove from timers list
                     }
                 },
@@ -120,14 +120,14 @@ namespace jbo
     void
     timer::start()
     {
-        m_timer.start();
+        m_data.start();
     }
 
     inline
     void
     timer::stop()
     {
-        m_timer.stop();
+        m_data.stop();
     }
 
     /**
@@ -138,7 +138,7 @@ namespace jbo
      *          The benefit of this approach is that timer tasks are not (necessarily) executed in the same thread as
      *          the tick() function. This provides better timer accuracy.
      */
-    struct timer_manager
+    struct manager
     {
     private:
         using resolution = std::chrono::milliseconds;
@@ -146,10 +146,10 @@ namespace jbo
     public:
         [[nodiscard]]
         static
-        timer_manager&
+        manager&
         instance()
         {
-            static timer_manager i;
+            static manager i;
             return i;
         }
 
@@ -158,8 +158,8 @@ namespace jbo
         {
             // Disable all timers
             std::scoped_lock lock(m_timers.mutex);
-            for (timer_data& t : m_timers.list)
-                t.stop();
+            for (data& d : m_timers.list)
+                d.stop();
 
             // Clear pending tasks
             // ToDo
@@ -171,8 +171,8 @@ namespace jbo
         periodic(std::chrono::milliseconds interval, F&& f, Args&& ...args)
         {
             return add(
-            timer_data::periodic_constant{ .interval = interval },
-            std::forward<F>(f), std::forward<Args>(args)...
+                data::periodic_constant{ .interval = interval },
+                std::forward<F>(f), std::forward<Args>(args)...
             );
         }
 
@@ -181,7 +181,7 @@ namespace jbo
         periodic(std::chrono::milliseconds min, std::chrono::milliseconds max, F&& f, Args&& ...args)
         {
             return add(
-            timer_data::periodic_uniform{ .distribution = decltype(timer_data::periodic_uniform::distribution)(min.count(), max.count())},
+            data::periodic_uniform{ .distribution = decltype(data::periodic_uniform::distribution)(min.count(), max.count())},
                 std::forward<F>(f), std::forward<Args>(args)...
             );
         }
@@ -192,7 +192,7 @@ namespace jbo
         single_shot(std::chrono::milliseconds interval, F&& f, Args&& ...args)
         {
             return add(
-                timer_data::singleshot{ },
+                data::singleshot{ },
                 std::forward<F>(f), std::forward<Args>(args)...
             );
         }
@@ -211,7 +211,7 @@ namespace jbo
         {
             // Iterate over each timer
             std::scoped_lock lock(m_timers.mutex);
-            for (timer_data& t : m_timers.list) {
+            for (data& t : m_timers.list) {
                 // Acquire mutex lock
                 //std::scoped_lock lock(t.m_mutex);
 
@@ -251,7 +251,7 @@ namespace jbo
         execute_task()
         {
             // Get task
-            timer_data::task_t task;
+            data::task_t task;
             {
                 // Get the task
                 if (!m_pending_tasks.try_pop(task))
@@ -265,30 +265,30 @@ namespace jbo
     private:
         struct {
             std::mutex mutex;
-            std::forward_list<timer_data> list;      // ToDo: Should we use std::priority_queue to keep timers with shorter interval in the front?
+            std::forward_list<data> list;      // ToDo: Should we use std::priority_queue to keep timers with shorter interval in the front?
         } m_timers;
-        queue<timer_data::task_t> m_pending_tasks;
+        queue<data::task_t> m_pending_tasks;
 
         std::default_random_engine m_random_generator;
 
-        timer_manager()
+        manager()
         {
             // Generator
             // ToDo: Better seed
             m_random_generator = decltype(m_random_generator)(std::chrono::system_clock::now().time_since_epoch().count());
         }
 
-        timer_manager(const timer_manager&) = delete;
-        timer_manager(timer_manager&&) = delete;
+        manager(const manager&) = delete;
+        manager(manager&&) = delete;
 
         virtual
-        ~timer_manager() = default;
+        ~manager() = default;
 
-        timer_manager&
-        operator=(const timer_manager&) = delete;
+        manager&
+        operator=(const manager&) = delete;
 
-        timer_manager&
-        operator=(timer_manager&&) = delete;
+        manager&
+        operator=(manager&&) = delete;
 
         template<
             typename TimerData,
@@ -299,7 +299,7 @@ namespace jbo
         {
             std::scoped_lock lock(m_timers.mutex);
 
-            timer_data& t = m_timers.list.emplace_front();
+            data& t = m_timers.list.emplace_front();
             t.data = std::move(td);
             t.task = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
             t.enabled = true;
@@ -316,18 +316,18 @@ namespace jbo
     //       Can we protect against this or does the user have to do that themselves in their task executor function?
     // ToDo: Better name?
     struct
-    timer_executor
+    executor
     {
         using clock_type = std::chrono::steady_clock;
 
-        timer_executor(timer_manager& tm, std::chrono::milliseconds tick_interval) :
+        executor(manager& tm, std::chrono::milliseconds tick_interval) :
             m_tm{ tm },
             m_tick_interval{ tick_interval }
         {
         }
 
         virtual
-        ~timer_executor()
+        ~executor()
         {
             stop();
         }
@@ -337,8 +337,8 @@ namespace jbo
         {
             m_stop.clear();
 
-            m_task_thread = std::thread(&timer_executor::task_worker, this);
-            m_ticker_thread = std::thread(&timer_executor::tick_worker, this);
+            m_task_thread = std::thread(&executor::task_worker, this);
+            m_ticker_thread = std::thread(&executor::tick_worker, this);
         }
 
         void
@@ -353,7 +353,7 @@ namespace jbo
         }
 
     private:
-        timer_manager& m_tm;
+        manager& m_tm;
         const std::chrono::milliseconds m_tick_interval;
         std::thread m_ticker_thread;
         std::thread m_task_thread;
@@ -365,7 +365,7 @@ namespace jbo
             static auto t_prev = clock_type::now();
             while (!m_stop.test()) {
                 const auto t_now = clock_type::now();
-                jbo::timer_manager::instance().tick(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_prev));
+                manager::instance().tick(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_prev));
                 t_prev = t_now;
 
                 std::this_thread::sleep_for(m_tick_interval);
@@ -376,7 +376,7 @@ namespace jbo
         task_worker()
         {
             while (!m_stop.test()) {
-                jbo::timer_manager::instance().execute_task();
+                manager::instance().execute_task();
             }
         }
     };
