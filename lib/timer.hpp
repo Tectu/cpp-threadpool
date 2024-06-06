@@ -348,8 +348,10 @@ namespace jbo::timers
 
             m_tm.stop();
 
-            m_ticker_thread.join();
-            m_task_thread.join();
+            if (m_ticker_thread.joinable())
+                m_ticker_thread.join();
+            if (m_task_thread.joinable())
+                m_task_thread.join();
         }
 
     private:
