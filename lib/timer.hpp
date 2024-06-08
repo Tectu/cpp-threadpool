@@ -25,10 +25,19 @@ namespace jbo::timers
      */
     struct timer
     {
+        timer() = delete;
+
         timer(data& d) :
             m_data{ d }
         {
         }
+
+        timer(const timer& other) = default;
+
+        timer(timer&& other) = default;
+
+        virtual
+        ~timer() = default;
 
         void
         start();
