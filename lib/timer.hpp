@@ -20,6 +20,8 @@ namespace jbo::timers
     struct data;
 
     /**
+     * A timer handle for the user to operate on.
+     *
      * @note Although this is called timer, it's actually just a handle. We do this to hide implementation complexity
      *       from the user.
      */
@@ -39,9 +41,15 @@ namespace jbo::timers
         virtual
         ~timer() = default;
 
+        /**
+         * Start the timer.
+         */
         void
         start();
 
+        /**
+         * Stop the timer.
+         */
         void
         stop();
 
