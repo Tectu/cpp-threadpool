@@ -41,6 +41,12 @@ namespace jbo::timers
         virtual
         ~timer() = default;
 
+        timer&
+        operator=(const timer& other) = default;
+
+        timer&
+        operator=(timer&& other) = default;
+
         /**
          * Start the timer.
          */
