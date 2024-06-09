@@ -29,6 +29,7 @@ namespace jbo::timers
     {
         timer() = delete;
 
+        explicit
         timer(data& d) :
             m_data{ d }
         {
@@ -42,10 +43,10 @@ namespace jbo::timers
         ~timer() = default;
 
         timer&
-        operator=(const timer& other) = default;
+        operator=(const timer& other) = delete;
 
         timer&
-        operator=(timer&& other) = default;
+        operator=(timer&& other) = delete;
 
         /**
          * Start the timer.
