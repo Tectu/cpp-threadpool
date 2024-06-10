@@ -107,6 +107,7 @@ namespace jbo::timers
         };
 
         std::mutex m_mutex;
+        std::mutex m_task_mutex;
         task_type m_task;
         std::chrono::milliseconds m_current;      // ToDo: Should this be atomic?
         bool m_enabled = false;
@@ -140,6 +141,14 @@ namespace jbo::timers
                 m_data
             );
         }
+
+        void
+        execute_task()
+        {
+            std::scoped_lock lock(m_task_mutex);
+
+            m_task();
+        }
     };
 
     inline
@@ -163,6 +172,9 @@ namespace jbo::timers
      *          up timer tasks for execution when a timer expires.
      *          The benefit of this approach is that timer tasks are not (necessarily) executed in the same thread as
      *          the tick() function. This provides better timer accuracy.
+     *
+     * @note There's an internal locking mechanism in place to prevent simultaneous execution of the timer task from
+     *       multiple threads.
      */
     struct manager
     {
@@ -257,7 +269,7 @@ namespace jbo::timers
                     t.arm(m_random_generator);
 
                     // Push task
-                    m_pending_tasks.emplace(t.m_task);
+                    m_pending_tasks.emplace(std::bind(&data::execute_task, &t));
                 }
             }
 
@@ -269,6 +281,7 @@ namespace jbo::timers
          * @details This function can be used to retrieve a timer task from the queue (if any). This function does not
          *          actually execute the task.
          *
+         * @note This function is thread-safe.
          * @note This should be called more frequently than tick() to prevent the task queue from filling up.
          *
          * @return Whether a task was popped from the queue.
