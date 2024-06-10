@@ -1,4 +1,4 @@
-set(TARGET threadpool-example-timer)
+set(TARGET threadpool-example-timers-basic)
 
 add_executable(${TARGET})
 

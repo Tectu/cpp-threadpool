@@ -1,3 +1,2 @@
-add_subdirectory(basic)
-add_subdirectory(restart)
-add_subdirectory(timer)
+add_subdirectory(threadpool)
+add_subdirectory(timers)

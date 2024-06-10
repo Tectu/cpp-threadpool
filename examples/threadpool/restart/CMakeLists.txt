@@ -1,4 +1,4 @@
-set(TARGET threadpool-example-restart)
+set(TARGET threadpool-example-threadpool-restart)
 
 add_executable(${TARGET})
 

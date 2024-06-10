@@ -1,4 +1,4 @@
-set(TARGET threadpool-example-basic)
+set(TARGET threadpool-example-threadpool-basic)
 
 add_executable(${TARGET})
 
