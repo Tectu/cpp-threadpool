@@ -277,11 +277,8 @@ namespace jbo::timers
         {
             // Get task
             data::task_type task;
-            {
-                // Get the task
-                if (!m_pending_tasks.try_pop(task))
-                    return;
-            }
+            if (!m_pending_tasks.try_pop(task))
+                return;
 
             // Run task
             task();
