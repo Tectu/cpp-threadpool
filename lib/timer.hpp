@@ -109,6 +109,7 @@ namespace jbo::timers
         std::mutex m_mutex;
         std::mutex m_task_mutex;
         task_type m_task;
+        std::atomic_flag m_task_pending;
         std::chrono::milliseconds m_current;      // ToDo: Should this be atomic?
         bool m_enabled = false;
         std::variant<periodic_constant, periodic_uniform, singleshot> m_data;
@@ -142,12 +143,25 @@ namespace jbo::timers
             );
         }
 
+        /**
+         * Execute the timer task.
+         *
+         * @note This will return immediately if the task is currently already being executed.
+         */
         void
         execute_task()
         {
-            std::scoped_lock lock(m_task_mutex);
+            // Do not execute if already executing
+            if (m_task_pending.test())
+                return;
+            m_task_pending.test_and_set();
 
+            // Execute task
+            std::scoped_lock lock(m_task_mutex);
             m_task();
+
+            // Ready to go again
+            m_task_pending.clear();
         }
     };
 
