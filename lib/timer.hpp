@@ -331,84 +331,89 @@ namespace jbo::timers
         }
     };
 
-    /**
-     * Executor to act on a timer manager.
-     */
-    // ToDo: Allow executing tasks via a threadpool. Note that this requires that timer tasks can be executed in parallel.
-    //       Can we protect against this or does the user have to do that themselves in their task executor function?
-    // ToDo: Better name?
-    template<std::size_t NumTaskExecutors>
-    struct
-    executor
+    namespace executors
     {
-        using clock_type = std::chrono::steady_clock;
 
-        executor(manager& tm, std::chrono::milliseconds tick_interval) :
-            m_tm{ tm },
-            m_tick_interval{ tick_interval }
+        /**
+         * Standalone executor.
+         *
+         * @details This executor runs 1+N threads: One thread to run the timer ticker and N threads to execute
+         *          timer tasks.
+         */
+        template<std::size_t NumTaskExecutors>
+        struct
+        standalone
         {
-        }
+            using clock_type = std::chrono::steady_clock;
 
-        virtual
-        ~executor()
-        {
-            stop();
-        }
-
-        void
-        start()
-        {
-            m_stop.clear();
-
-            for (auto& t : m_task_thread)
-                t = std::thread(&executor::task_worker, this);
-
-            m_ticker_thread = std::thread(&executor::tick_worker, this);
-        }
-
-        void
-        stop()
-        {
-            m_stop.test_and_set();
-
-            m_tm.stop();
-
-            if (m_ticker_thread.joinable())
-                m_ticker_thread.join();
-
-            for (auto& t : m_task_thread) {
-                if (t.joinable())
-                    t.join();
+            standalone(manager& tm, std::chrono::milliseconds tick_interval) :
+                m_tm{ tm },
+                m_tick_interval{ tick_interval }
+            {
             }
-        }
 
-    private:
-        manager& m_tm;
-        const std::chrono::milliseconds m_tick_interval;
-        std::thread m_ticker_thread;
-        std::array<std::thread, NumTaskExecutors> m_task_thread;
-        std::atomic_flag m_stop;
-
-        void
-        tick_worker()
-        {
-            static auto t_prev = clock_type::now();
-            while (!m_stop.test()) {
-                const auto t_now = clock_type::now();
-                manager::instance().tick(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_prev));
-                t_prev = t_now;
-
-                std::this_thread::sleep_for(m_tick_interval);
+            virtual
+            ~standalone()
+            {
+                stop();
             }
-        }
 
-        void
-        task_worker()
-        {
-            while (!m_stop.test()) {
-                manager::instance().execute_task();
+            void
+            start()
+            {
+                m_stop.clear();
+
+                for (auto& t : m_task_thread)
+                    t = std::thread(&standalone::task_worker, this);
+
+                m_ticker_thread = std::thread(&standalone::tick_worker, this);
             }
-        }
-    };
+
+            void
+            stop()
+            {
+                m_stop.test_and_set();
+
+                m_tm.stop();
+
+                if (m_ticker_thread.joinable())
+                    m_ticker_thread.join();
+
+                for (auto& t : m_task_thread) {
+                    if (t.joinable())
+                        t.join();
+                }
+            }
+
+        private:
+            manager& m_tm;
+            const std::chrono::milliseconds m_tick_interval;
+            std::thread m_ticker_thread;
+            std::array<std::thread, NumTaskExecutors> m_task_thread;
+            std::atomic_flag m_stop;
+
+            void
+            tick_worker()
+            {
+                static auto t_prev = clock_type::now();
+                while (!m_stop.test()) {
+                    const auto t_now = clock_type::now();
+                    manager::instance().tick(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_prev));
+                    t_prev = t_now;
+
+                    std::this_thread::sleep_for(m_tick_interval);
+                }
+            }
+
+            void
+            task_worker()
+            {
+                while (!m_stop.test()) {
+                    manager::instance().execute_task();
+                }
+            }
+        };
+
+    }
 
 }
