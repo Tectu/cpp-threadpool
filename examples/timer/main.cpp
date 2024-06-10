@@ -18,7 +18,7 @@ main()
 {
     using namespace std::chrono_literals;
 
-    jbo::timers::executor te(jbo::timers::manager::instance(), 10ms);
+    jbo::timers::executor<1> te(jbo::timers::manager::instance(), 10ms);
     te.start();
 
     // A periodic timer

@@ -3,6 +3,7 @@
 #include "queue.hpp"
 
 #include <atomic>
+#include <array>
 #include <chrono>
 #include <forward_list>
 #include <functional>
@@ -339,6 +340,7 @@ namespace jbo::timers
     // ToDo: Allow executing tasks via a threadpool. Note that this requires that timer tasks can be executed in parallel.
     //       Can we protect against this or does the user have to do that themselves in their task executor function?
     // ToDo: Better name?
+    template<std::size_t NumTaskExecutors>
     struct
     executor
     {
@@ -361,7 +363,9 @@ namespace jbo::timers
         {
             m_stop.clear();
 
-            m_task_thread = std::thread(&executor::task_worker, this);
+            for (auto& t : m_task_thread)
+                t = std::thread(&executor::task_worker, this);
+
             m_ticker_thread = std::thread(&executor::tick_worker, this);
         }
 
@@ -374,15 +378,18 @@ namespace jbo::timers
 
             if (m_ticker_thread.joinable())
                 m_ticker_thread.join();
-            if (m_task_thread.joinable())
-                m_task_thread.join();
+
+            for (auto& t : m_task_thread) {
+                if (t.joinable())
+                    t.join();
+            }
         }
 
     private:
         manager& m_tm;
         const std::chrono::milliseconds m_tick_interval;
         std::thread m_ticker_thread;
-        std::thread m_task_thread;
+        std::array<std::thread, NumTaskExecutors> m_task_thread;
         std::atomic_flag m_stop;
 
         void
