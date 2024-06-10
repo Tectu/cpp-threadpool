@@ -518,7 +518,7 @@ namespace jbo::timers
                         continue;
 
                     if (task)
-                        m_tp.enqueue(std::move(task));
+                        std::ignore = m_tp.enqueue(std::move(task));
                 }
             }
         };
