@@ -263,25 +263,20 @@ namespace jbo::timers
         }
 
         /**
-         * Executes actual timer tasks.
+         * Attempts to pop a task from the pending tasks queue.
          *
-         * @details Executes one timer task and returns. Returns immediately if currently no timer task needs to be
-         *          executed.
+         * @details This function can be used to retrieve a timer task from the queue (if any). This function does not
+         *          actually execute the task.
          *
-         * @note This function should be called much more frequently than tick() to prevent the timer task execution
-         *       queue from filling up.
+         * @note This should be called more frequently than tick() to prevent the task queue from filling up.
+         *
+         * @return Whether a task was popped from the queue.
          */
-        // ToDo: Make sure this is thread safe (i.e. having more than one worker thread)
-        void
-        execute_task()
+        [[nodiscard]]
+        bool
+        pop_task(std::function<void()>& task)
         {
-            // Get task
-            data::task_type task;
-            if (!m_pending_tasks.try_pop(task))
-                return;
-
-            // Run task
-            task();
+            return m_pending_tasks.try_pop(task);
         }
 
     private:
@@ -409,7 +404,12 @@ namespace jbo::timers
             task_worker()
             {
                 while (!m_stop.test()) {
-                    manager::instance().execute_task();
+                    std::function<void()> task;
+                    if (!manager::instance().pop_task(task))
+                        continue;
+
+                    if (task)
+                        task();
                 }
             }
         };
