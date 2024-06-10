@@ -106,6 +106,7 @@ namespace jbo::timers
 
         std::mutex m_mutex;
         task_type task;
+        std::mutex task_mutex;
         std::chrono::milliseconds current;      // ToDo: Should this be atomic?
         bool enabled = false;
         std::variant<periodic_constant, periodic_uniform, singleshot> data;
@@ -255,7 +256,10 @@ namespace jbo::timers
                     t.arm(m_random_generator);
 
                     // Push task
-                    m_pending_tasks.emplace(t.task);
+                    m_pending_tasks.emplace([f = t.task, mtx = &t.task_mutex]{
+                        std::scoped_lock lock(*mtx);
+                        f();
+                    });
                 }
             }
 
@@ -283,7 +287,8 @@ namespace jbo::timers
             }
 
             // Run task
-            task();
+            if (task)
+                task();
         }
 
     private:
