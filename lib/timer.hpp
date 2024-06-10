@@ -361,7 +361,8 @@ namespace jbo::timers
         {
             m_stop.clear();
 
-            m_task_thread = std::thread(&executor::task_worker, this);
+            m_task_thread_0 = std::thread(&executor::task_worker, this);
+            m_task_thread_1 = std::thread(&executor::task_worker, this);
             m_ticker_thread = std::thread(&executor::tick_worker, this);
         }
 
@@ -374,15 +375,18 @@ namespace jbo::timers
 
             if (m_ticker_thread.joinable())
                 m_ticker_thread.join();
-            if (m_task_thread.joinable())
-                m_task_thread.join();
+            if (m_task_thread_0.joinable())
+                m_task_thread_0.join();
+            if (m_task_thread_1.joinable())
+                m_task_thread_1.join();
         }
 
     private:
         manager& m_tm;
         const std::chrono::milliseconds m_tick_interval;
         std::thread m_ticker_thread;
-        std::thread m_task_thread;
+        std::thread m_task_thread_0;
+        std::thread m_task_thread_1;
         std::atomic_flag m_stop;
 
         void

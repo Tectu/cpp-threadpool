@@ -27,7 +27,7 @@ main()
         print_time(std::cout);
         std::cout << " | periodic 1: (" << i++ << ") --- thread: " << std::this_thread::get_id() << std::endl;
     });
-
+#if 0
     // A timer firing at random intervals
     jbo::timers::manager::instance().periodic(100ms, 1000ms, []{
         print_time(std::cout);
@@ -39,7 +39,7 @@ main()
         print_time(std::cout);
         std::cout  << " | Single Shot!" << std::endl;
     });
-
+#endif
     std::this_thread::sleep_for(5s);
 
     std::cout << "stopping timer executor..." << std::endl;
