@@ -81,7 +81,7 @@ namespace jbo::timers
         {
             std::scoped_lock lock(m_mutex);
 
-            enabled = true;
+            m_enabled = true;
         }
 
         void
@@ -89,7 +89,7 @@ namespace jbo::timers
         {
             std::scoped_lock lock(m_mutex);
 
-            enabled = false;
+            m_enabled = false;
         }
 
     private:
@@ -105,10 +105,10 @@ namespace jbo::timers
         };
 
         std::mutex m_mutex;
-        task_type task;
-        std::chrono::milliseconds current;      // ToDo: Should this be atomic?
-        bool enabled = false;
-        std::variant<periodic_constant, periodic_uniform, singleshot> data;
+        task_type m_task;
+        std::chrono::milliseconds m_current;      // ToDo: Should this be atomic?
+        bool m_enabled = false;
+        std::variant<periodic_constant, periodic_uniform, singleshot> m_data;
 
         [[nodiscard]]
         timer
@@ -126,16 +126,16 @@ namespace jbo::timers
             std::visit(
                 overload{
                     [this](data::periodic_constant& td) {
-                        current = td.interval;
+                        m_current = td.interval;
                     },
                     [this, &rng](data::periodic_uniform& td) {
-                        current = std::chrono::milliseconds{td.distribution(rng)};
+                        m_current = std::chrono::milliseconds{td.distribution(rng)};
                     },
                     [this](data::singleshot& td) {
-                        enabled = false;   // ToDo: Remove from timers list
+                        m_enabled = false;   // ToDo: Remove from timers list
                     }
                 },
-                data
+                m_data
             );
         }
     };
@@ -240,22 +240,22 @@ namespace jbo::timers
                 //std::scoped_lock lock(t.m_mutex);
 
                 // Skip disabled timers
-                if (!t.enabled)
+                if (!t.m_enabled)
                     continue;
 
                 // Decrement (prevent overflow)
-                if (t.current - d > decltype(t.current)::zero())
-                    t.current -= d;
+                if (t.m_current - d > decltype(t.m_current)::zero())
+                    t.m_current -= d;
                 else
-                    t.current = decltype(t.current)::zero();
+                    t.m_current = decltype(t.m_current)::zero();
 
                 // Check for timeout
-                if (t.current == decltype(t.current)::zero()) {
+                if (t.m_current == decltype(t.m_current)::zero()) {
                     // Re-arm
                     t.arm(m_random_generator);
 
                     // Push task
-                    m_pending_tasks.emplace(t.task);
+                    m_pending_tasks.emplace(t.m_task);
                 }
             }
 
@@ -324,9 +324,9 @@ namespace jbo::timers
             std::scoped_lock lock(m_timers.mutex);
 
             data& t = m_timers.list.emplace_front();
-            t.data = std::move(td);
-            t.task = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
-            t.enabled = true;
+            t.m_data = std::move(td);
+            t.m_task = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+            t.m_enabled = true;
             t.arm(m_random_generator);
 
             return t.make_handle();
