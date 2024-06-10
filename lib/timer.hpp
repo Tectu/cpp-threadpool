@@ -1,6 +1,7 @@
 #pragma once
 
 #include "queue.hpp"
+#include "thread_pool.hpp"
 
 #include <atomic>
 #include <array>
@@ -410,6 +411,87 @@ namespace jbo::timers
 
                     if (task)
                         task();
+                }
+            }
+        };
+
+        /**
+         * Executor using thread_pool for timer task execution.
+         *
+         * @details This executor maintains two threads: One for the timer ticker and one to push timer tasks to the
+         *          provided threadpool.
+         */
+        // ToDo: Lots of code duplication with standalone executor.
+        struct thread_pool
+        {
+            using clock_type = std::chrono::steady_clock;
+
+            thread_pool(manager& tm, jbo::thread_pool& tp, std::chrono::milliseconds tick_interval) :
+                m_tm{ tm },
+                m_tp{ tp },
+                m_tick_interval{ tick_interval }
+            {
+            }
+
+            virtual
+            ~thread_pool()
+            {
+                stop();
+            }
+
+            void
+            start()
+            {
+                m_stop.clear();
+
+                m_task_thread = std::thread(&thread_pool::task_worker, this);
+                m_ticker_thread = std::thread(&thread_pool::tick_worker, this);
+            }
+
+            void
+            stop()
+            {
+                m_stop.test_and_set();
+
+                m_tm.stop();
+
+                if (m_ticker_thread.joinable())
+                    m_ticker_thread.join();
+                if (m_task_thread.joinable())
+                    m_task_thread.join();
+            }
+
+        private:
+            manager& m_tm;
+            jbo::thread_pool& m_tp;
+            const std::chrono::milliseconds m_tick_interval;
+            std::thread m_ticker_thread;
+            std::thread m_task_thread;
+            std::atomic_flag m_stop;
+
+            void
+            tick_worker()
+            {
+                static auto t_prev = clock_type::now();
+                while (!m_stop.test()) {
+                    const auto t_now = clock_type::now();
+                    manager::instance().tick(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_prev));
+                    t_prev = t_now;
+
+                    std::this_thread::sleep_for(m_tick_interval);
+                }
+            }
+
+            void
+            task_worker()
+            {
+                while (!m_stop.test()) {
+                    std::function<void()> task;
+                    if (!manager::instance().pop_task(task))
+                        continue;
+
+                    if (task)
+                        m_tp.enqueue(std::move(task));
                 }
             }
         };
