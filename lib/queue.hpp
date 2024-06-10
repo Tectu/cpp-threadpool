@@ -70,8 +70,8 @@ namespace jbo
         }
 
     private:
-        using read_lock = std::scoped_lock<std::shared_mutex>;
-        using write_lock = std::shared_lock<std::shared_mutex>;
+        using read_lock = std::shared_lock<std::shared_mutex>;
+        using write_lock = std::scoped_lock<std::shared_mutex>;
 
         Queue m_queue;
         mutable std::shared_mutex m_mtx;
