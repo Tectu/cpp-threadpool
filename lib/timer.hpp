@@ -332,7 +332,7 @@ namespace jbo::timers
         /**
          * Standalone executor.
          *
-         * @details This executor runs 1+N threads: One thread to run the timer ticker and N threads to execute
+         * @details This executor spawns 1+N threads: One thread to run the timer ticks and N threads to execute
          *          timer tasks.
          */
         template<std::size_t NumTaskExecutors>
