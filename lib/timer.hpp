@@ -198,6 +198,18 @@ namespace jbo::timers
         using resolution = std::chrono::milliseconds;
 
     public:
+        manager(const manager&) = delete;
+        manager(manager&&) = delete;
+
+        virtual
+        ~manager() = default;
+
+        manager&
+        operator=(const manager&) = delete;
+
+        manager&
+        operator=(manager&&) = delete;
+
         [[nodiscard]]
         static
         manager&
@@ -324,18 +336,6 @@ namespace jbo::timers
             // ToDo: Better seed
             m_random_generator = decltype(m_random_generator)(std::chrono::system_clock::now().time_since_epoch().count());
         }
-
-        manager(const manager&) = delete;
-        manager(manager&&) = delete;
-
-        virtual
-        ~manager() = default;
-
-        manager&
-        operator=(const manager&) = delete;
-
-        manager&
-        operator=(manager&&) = delete;
 
         template<
             typename TimerData,
