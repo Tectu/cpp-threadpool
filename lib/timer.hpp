@@ -228,8 +228,7 @@ namespace jbo::timers
                 d.stop();
 
             // Clear pending tasks
-            // ToDo
-            //m_pending_tasks.clear();
+            m_pending_tasks.clear();
         }
 
         template<typename F, typename ...Args>
