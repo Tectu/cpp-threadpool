@@ -1,29 +1,3 @@
-set(TARGET threadpool)
+set(FILESET_BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
 
-add_library(${TARGET} INTERFACE IMPORTED GLOBAL)
-
-target_compile_features(
-    ${TARGET}
-    INTERFACE
-        cxx_std_20
-)
-
-target_sources(
-    ${TARGET}
-    INTERFACE
-        queue.hpp
-        thread_pool.hpp
-        timer.hpp
-)
-
-target_link_libraries(
-    ${TARGET}
-    INTERFACE
-        pthread
-)
-
-target_include_directories(
-    ${TARGET}
-    INTERFACE
-        ${CMAKE_CURRENT_LIST_DIR}
-)
+add_subdirectory(jbo)
