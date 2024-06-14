@@ -43,7 +43,7 @@ namespace jbo
         clear()
         {
             write_lock lock(m_mtx);
-            m_queue.clear();
+            m_queue = { };
         }
 
         template<typename ...Args>
