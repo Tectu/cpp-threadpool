@@ -29,11 +29,11 @@ namespace jbo::timers
      */
     struct timer
     {
-        timer() = delete;
+        timer() = default;
 
         explicit
         timer(data& d) :
-            m_data{ d }
+            m_data{ &d }
         {
         }
 
@@ -45,10 +45,10 @@ namespace jbo::timers
         ~timer() = default;
 
         timer&
-        operator=(const timer& other) = delete;
+        operator=(const timer& other) = default;
 
         timer&
-        operator=(timer&& other) = delete;
+        operator=(timer&& other) = default;
 
         /**
          * Start the timer.
@@ -63,7 +63,7 @@ namespace jbo::timers
         stop();
 
     private:
-        data& m_data;
+        data* m_data = nullptr;
     };
 
     /**
@@ -118,7 +118,7 @@ namespace jbo::timers
         timer
         make_handle()
         {
-            return timer{*this};
+            return timer(*this);
         }
 
         template<typename RandomGenerator>
@@ -169,14 +169,16 @@ namespace jbo::timers
     void
     timer::start()
     {
-        m_data.start();
+        if (m_data)
+            m_data->start();
     }
 
     inline
     void
     timer::stop()
     {
-        m_data.stop();
+        if (m_data)
+            m_data->stop();
     }
 
     /**
