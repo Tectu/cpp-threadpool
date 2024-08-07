@@ -2,6 +2,9 @@ set(TARGET threadpool)
 
 add_library(${TARGET} INTERFACE)
 
+# Provide namespace'd ALIAS target to support superbuilds
+add_library(jbo::${TARGET} ALIAS ${TARGET})
+
 target_compile_features(
     ${TARGET}
     INTERFACE
