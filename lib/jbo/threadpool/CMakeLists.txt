@@ -2,9 +2,6 @@ set(TARGET threadpool)
 
 add_library(${TARGET} INTERFACE)
 
-include(CMakePrintHelpers)
-cmake_print_variables(FILESET_BASE_DIR)
-
 target_compile_features(
     ${TARGET}
     INTERFACE
