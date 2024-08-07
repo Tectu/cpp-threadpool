@@ -7,7 +7,7 @@ project(
         CXX
 )
 
-option(THREADPOOL_BUILD_EXAMPLES "Whether to build examples" ON)
+option(THREADPOOL_BUILD_EXAMPLES "Whether to build examples" OFF)
 
 add_subdirectory(lib)
 
