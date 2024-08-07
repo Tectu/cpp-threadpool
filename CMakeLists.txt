@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
     cpp-threadpool
-    VERSION 0.0.0
+    VERSION 0.1.0
     LANGUAGES
         CXX
 )
