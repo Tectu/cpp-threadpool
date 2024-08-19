@@ -136,7 +136,20 @@ namespace jbo::timers
                         m_current = std::chrono::milliseconds{td.distribution(rng)};
                     },
                     [this](data::singleshot& td) {
-                        m_enabled = false;   // ToDo: Remove from timers list
+                        //
+                        // Note: arm() is essentially called twice for a single-shot timer: The first time just when
+                        //       the timer was created and the second time just after the timer fired/expired.
+                        //       As such, we have to keep record of whether we are calling arm() the first time or the
+                        //       second time. If we don't have this check in place, the timer would never fire as the first
+                        //       call to arm() happens immediately at/after timer creation which would immediately disable
+                        //       and remove the timer.
+
+                        static bool first_invocation = true;
+
+                        if (!first_invocation)
+                            m_enabled = false;   // ToDo: Remove from timers list
+
+                        first_invocation = false;
                     }
                 },
                 m_data
@@ -251,7 +264,6 @@ namespace jbo::timers
             );
         }
 
-        // ToDo: This does currently not work because timer::arm() immediately disables the timer
         template<typename F, typename ...Args>
         timer
         single_shot(std::chrono::milliseconds interval, F&& f, Args&& ...args)
