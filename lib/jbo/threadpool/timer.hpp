@@ -62,6 +62,17 @@ namespace jbo::timers
         void
         stop();
 
+        /**
+         * Change the interval of a periodic timer.
+         *
+         * @note This will fail (do nothing and return false) if the timer is not a constant interval type.
+         *
+         * @return Whether the interval was changed successfully.
+         */
+        template<typename Rep, typename Period>
+        bool
+        set_interval(const std::chrono::duration<Rep, Period>& interval);
+
     private:
         data* m_data = nullptr;
     };
@@ -71,6 +82,12 @@ namespace jbo::timers
      */
     struct data
     {
+    private:
+        struct periodic_constant;
+        struct periodic_uniform;
+        struct singleshot;
+
+    public:
         /**
          * The task type.
          *
@@ -92,6 +109,20 @@ namespace jbo::timers
             std::scoped_lock lock(m_mutex);
 
             m_enabled = false;
+        }
+
+        template<typename Rep, typename Period>
+        bool
+        set_interval(const std::chrono::duration<Rep, Period>& interval)
+        {
+            std::scoped_lock lock(m_mutex);
+
+            if (auto pc = std::get_if<periodic_constant>(&m_data); pc) {
+                pc->interval = std::chrono::duration_cast<decltype(pc->interval)>(interval);
+                return true;
+            }
+
+            return false;
         }
 
     private:
@@ -192,6 +223,17 @@ namespace jbo::timers
     {
         if (m_data)
             m_data->stop();
+    }
+
+    template<typename Rep, typename Period>
+    inline
+    bool
+    timer::set_interval(const std::chrono::duration<Rep, Period>& interval)
+    {
+        if (!m_data) [[unlikely]]
+            return false;
+
+        return m_data->set_interval(interval);
     }
 
     /**
